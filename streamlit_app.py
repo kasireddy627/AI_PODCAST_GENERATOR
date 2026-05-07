@@ -1,7 +1,12 @@
 import streamlit as st
-import requests
+import asyncio
+import os
 
-FASTAPI_URL = "http://127.0.0.1:8000"
+from app.services.article_extractor import extract_article
+from app.services.script_generator import generate_podcast_script
+from app.services.translator import translate_script
+from app.services.content_validator import validate_script
+from app.services.audio_generator import text_to_speech
 
 st.set_page_config(
     page_title="AI Podcast Generator",
@@ -10,11 +15,13 @@ st.set_page_config(
 
 st.title("Multilingual AI Podcast Generator")
 
-st.write("Generate AI-powered podcast audio from news articles.")
+st.write(
+    "Generate AI-powered multilingual podcast audio from news articles."
+)
 
-# -----------------------------------
+# ---------------------------------------------------
 # LANGUAGE OPTIONS
-# -----------------------------------
+# ---------------------------------------------------
 
 voice_options = {
     "English": "en-US-GuyNeural",
@@ -23,11 +30,13 @@ voice_options = {
     "Tamil": "ta-IN-ValluvarNeural"
 }
 
-# -----------------------------------
+# ---------------------------------------------------
 # USER INPUTS
-# -----------------------------------
+# ---------------------------------------------------
 
-article_url = st.text_input("Enter Article URL")
+article_url = st.text_input(
+    "Enter Article URL"
+)
 
 selected_language = st.selectbox(
     "Select Podcast Language",
@@ -36,9 +45,9 @@ selected_language = st.selectbox(
 
 generate_btn = st.button("Generate Podcast")
 
-# -----------------------------------
+# ---------------------------------------------------
 # MAIN PIPELINE
-# -----------------------------------
+# ---------------------------------------------------
 
 if generate_btn:
 
@@ -48,24 +57,17 @@ if generate_btn:
 
     else:
 
-        # -----------------------------------
-        # EXTRACT ARTICLE
-        # -----------------------------------
+        # ---------------------------------------------------
+        # ARTICLE EXTRACTION
+        # ---------------------------------------------------
 
         with st.spinner("Extracting article..."):
 
-            extract_response = requests.post(
-                f"{FASTAPI_URL}/extract-article",
-                json={
-                    "url": article_url
-                }
-            )
-
-            extract_data = extract_response.json()
+            extract_data = extract_article(article_url)
 
         if (
-            "data" not in extract_data
-            or "text" not in extract_data["data"]
+            "text" not in extract_data
+            or not extract_data["text"]
         ):
 
             st.error("Article extraction failed")
@@ -74,44 +76,33 @@ if generate_btn:
 
             st.stop()
 
-        article_text = extract_data["data"]["text"]
+        article_text = extract_data["text"]
 
         st.subheader("Extracted Article")
 
         st.write(article_text[:1500] + "...")
 
-        # -----------------------------------
-        # GENERATE SCRIPT
-        # -----------------------------------
+        # ---------------------------------------------------
+        # SCRIPT GENERATION
+        # ---------------------------------------------------
 
         with st.spinner("Generating podcast script..."):
 
-            script_response = requests.post(
-                f"{FASTAPI_URL}/generate-script",
-                json={
-                    "text": article_text
-                }
-            )
+            script = generate_podcast_script(article_text)
 
-            script_data = script_response.json()
-
-        if "script" not in script_data:
+        if not script:
 
             st.error("Script generation failed")
 
-            st.json(script_data)
-
             st.stop()
-
-        script = script_data["script"]
 
         st.subheader("Generated Script")
 
         st.write(script)
 
-        # -----------------------------------
-        # TRANSLATE SCRIPT
-        # -----------------------------------
+        # ---------------------------------------------------
+        # TRANSLATION
+        # ---------------------------------------------------
 
         final_script = script
 
@@ -119,70 +110,56 @@ if generate_btn:
 
             with st.spinner("Translating script..."):
 
-                translation_response = requests.post(
-                    f"{FASTAPI_URL}/translate-script",
-                    json={
-                        "script": script,
-                        "language": selected_language
-                    }
+                final_script = translate_script(
+                    script,
+                    selected_language
                 )
-
-                translation_data = translation_response.json()
-
-            if "translated_script" not in translation_data:
-
-                st.error("Translation failed")
-
-                st.json(translation_data)
-
-                st.stop()
-
-            final_script = translation_data["translated_script"]
 
             st.subheader("Translated Script")
 
             st.write(final_script)
 
-        # -----------------------------------
-        # VALIDATE SCRIPT
-        # -----------------------------------
+        # ---------------------------------------------------
+        # VALIDATION
+        # ---------------------------------------------------
 
         with st.spinner("Validating content..."):
 
-            validation_response = requests.post(
-                f"{FASTAPI_URL}/validate-script",
-                json={
-                    "script": final_script
-                }
-            )
-
-            validation_data = validation_response.json()
+            validation_result = validate_script(final_script)
 
         st.subheader("Validation Result")
 
-        st.json(validation_data["validation"])
+        st.json(validation_result)
 
-        # -----------------------------------
-        # GENERATE AUDIO
-        # -----------------------------------
+        # ---------------------------------------------------
+        # AUDIO GENERATION
+        # ---------------------------------------------------
 
         voice = voice_options[selected_language]
 
+        output_path = "podcast.mp3"
+
         with st.spinner("Generating podcast audio..."):
 
-            audio_response = requests.post(
-                f"{FASTAPI_URL}/generate-audio",
-                json={
-                    "script": final_script,
-                    "voice": voice
-                }
+            asyncio.run(
+                text_to_speech(
+                    final_script,
+                    output_path,
+                    voice
+                )
             )
 
-        if audio_response.status_code == 200:
+        # ---------------------------------------------------
+        # AUDIO PLAYBACK
+        # ---------------------------------------------------
+
+        if os.path.exists(output_path):
 
             st.subheader("Podcast Audio")
 
-            audio_bytes = audio_response.content
+            with open(output_path, "rb") as audio_file:
+
+                audio_bytes = audio_file.read()
 
             st.audio(audio_bytes, format="audio/mp3")
 
