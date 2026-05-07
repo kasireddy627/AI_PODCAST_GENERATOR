@@ -6,9 +6,11 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN python -m nltk.downloader punkt
+RUN python -m nltk.downloader punkt_tab
+
 COPY . .
 
-EXPOSE 8000
-EXPOSE 8501
+EXPOSE 10000
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 & streamlit run streamlit_app.py --server.port 10000 --server.address 0.0.0.0"]
+CMD streamlit run streamlit_app.py --server.port 10000 --server.address 0.0.0.0
