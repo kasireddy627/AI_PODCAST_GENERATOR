@@ -196,17 +196,6 @@ The application was containerized using Docker and deployed publicly using Rende
 - Dockerization & deployment
 - Streamlit + FastAPI integration
 
----
-
-# Current Limitations
-
-- Some regional websites fail extraction
-- Validation is heuristic-based
-- No persistent database yet
-- Single-user MVP architecture
-
----
-
 # Future Improvements
 
 - RSS feed automation
@@ -214,7 +203,6 @@ The application was containerized using Docker and deployed publicly using Rende
 - Background music integration
 - Multiple narrator voices
 - Cloud audio storage
-- Better factual verification
 - Workflow automation using n8n
 
 ---
