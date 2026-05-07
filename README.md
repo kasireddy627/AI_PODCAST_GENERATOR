@@ -1,5 +1,13 @@
 ````markdown
-# <span style="color:#2563eb;">Multilingual AI Podcast Generator</span>
+<h1 align="center">Multilingual AI Podcast Generator</h1>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/GenAI-Podcast_Platform-blue">
+  <img src="https://img.shields.io/badge/LLM-Groq-green">
+  <img src="https://img.shields.io/badge/Frontend-Streamlit-red">
+  <img src="https://img.shields.io/badge/Backend-FastAPI-teal">
+  <img src="https://img.shields.io/badge/Deployment-Docker-orange">
+</p>
 
 An end-to-end Generative AI platform that converts online news articles into multilingual podcast-style audio using LLMs, translation pipelines, AI validation, and neural text-to-speech.
 
